@@ -5,12 +5,7 @@
   vars:
     go_app_dir: /opt/go-game
     go_binary: /opt/go-game/go-game
-    nginx_config_file: >-
-      {% if ansible_os_family == "Debian" %}
-      /etc/nginx/sites-available/game.conf
-      {% else %}
-      /etc/nginx/conf.d/game.conf
-      {% endif %}
+    nginx_config_file: "/etc/nginx/conf.d/game.conf"
     game_path: "/game"
 
   tasks:
@@ -43,24 +38,10 @@
       async: 10
       poll: 0
 
-    - name: Ensure Nginx configuration directory exists
-      file:
-        path: "{{ nginx_config_file | dirname }}"
-        state: directory
-        mode: '0755'
-
     - name: Deploy Nginx reverse proxy configuration
       template:
         src: nginx_game_proxy.conf.j2
         dest: "{{ nginx_config_file }}"
-      notify: Reload Nginx
-
-    - name: Enable site on Debian-based systems
-      file:
-        src: "{{ nginx_config_file }}"
-        dest: "/etc/nginx/sites-enabled/game.conf"
-        state: link
-      when: ansible_os_family == "Debian"
       notify: Reload Nginx
 
     - name: Ensure Nginx is started and enabled

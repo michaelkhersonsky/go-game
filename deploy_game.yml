@@ -1,0 +1,99 @@
+---
+- name: Deploy Go Game with Nginx Proxy
+  hosts: all
+  become: true
+  vars:
+    # Customize this to change the path where the game will be available in the browser
+    game_path: "/game"
+    go_app_repo: "https://github.com/michaelkhersonsky/go-game.git"
+    go_app_dir: "/opt/go-game"
+    go_bin: "/opt/go-game/go-game"
+    nginx_conf_dir: "/etc/nginx/sites-available"
+    nginx_enabled_dir: "/etc/nginx/sites-enabled"
+    server_name: "localhost"  # Customize as needed for your server
+
+  tasks:
+    # Install dependencies based on the OS
+    - name: Install required dependencies on Ubuntu
+      apt:
+        name:
+          - git
+          - golang
+          - nginx
+        state: present
+        update_cache: yes
+      when: ansible_facts.os_family == "Debian"
+
+    - name: Install required dependencies on Rocky Linux
+      dnf:
+        name:
+          - git
+          - golang
+          - nginx
+        state: present
+        update_cache: yes
+      when: ansible_facts.os_family == "RedHat"
+
+    - name: Install required dependencies on Amazon Linux
+      yum:
+        name:
+          - git
+          - golang
+          - nginx
+        state: present
+        update_cache: yes
+      when: ansible_facts.os_family == "Amazon"
+
+    # Clone the Go game repository
+    - name: Clone the Go game repository
+      git:
+        repo: "{{ go_app_repo }}"
+        dest: "{{ go_app_dir }}"
+        version: "main"
+        force: yes
+
+    # Build the Go application
+    - name: Build the Go application
+      command: go build -o {{ go_bin }} {{ go_app_dir }}/main.go
+      args:
+        chdir: "{{ go_app_dir }}"
+    
+    # Create a systemd service to run the Go app in the background
+    - name: Create systemd service for the Go game
+      template:
+        src: go-game.service.j2
+        dest: /etc/systemd/system/go-game.service
+      notify:
+        - Restart go-game service
+
+    # Enable and start the Go game service
+    - name: Enable and start the Go game service
+      systemd:
+        name: go-game
+        enabled: yes
+        state: started
+
+    # Create Nginx configuration file for the game
+    - name: Configure Nginx to proxy the game
+      template:
+        src: nginx_game.conf.j2
+        dest: "{{ nginx_conf_dir }}/go-game"
+      notify:
+        - Reload nginx
+
+    # Enable the Nginx site configuration
+    - name: Enable Nginx site
+      command: "ln -s {{ nginx_conf_dir }}/go-game {{ nginx_enabled_dir }}/go-game"
+      args:
+        removes: "{{ nginx_enabled_dir }}/go-game"
+
+  handlers:
+    - name: Restart go-game service
+      systemd:
+        name: go-game
+        state: restarted
+
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded

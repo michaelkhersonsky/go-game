@@ -1,0 +1,13 @@
+[Unit]
+Description=Go Game Application
+After=network.target
+
+[Service]
+ExecStart={{ go_bin }}
+WorkingDirectory={{ go_app_dir }}
+Restart=always
+User=www-data
+Environment=GO111MODULE=on
+
+[Install]
+WantedBy=multi-user.target

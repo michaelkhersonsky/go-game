@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name _;
+    server_name {{ remote_host_ip }};
 
     location {{ game_path }}/ {
         proxy_pass http://localhost:8080/;

@@ -1,14 +1,20 @@
 ---
 - name: Deploy Go Game with Nginx Proxy
   hosts: game_servers
+  gather_facts: yes
   become: yes
   vars:
     go_app_dir: /opt/go-game
     go_binary: /opt/go-game/go-game
     nginx_config_file: "/etc/nginx/conf.d/game.conf"
     game_path: "/game"
+    #remote_host_ip: 10.0.10.185
 
   tasks:
+    - name: Pull remote host ip from remote host
+      set_fact:
+        remote_host_ip: "{{ ansible_default_ipv4.address }}"
+
     - name: Install required packages
       package:
         name:
